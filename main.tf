@@ -34,22 +34,6 @@ data "aws_iam_policy_document" "assume_role_recognition_lambda" {
   }
 }
 
-resource "aws_iam_policy" "lambda_logging_policy" {
-  name = "function-logging-policy"
-  policy = jsonencode({
-    "Version" : "2012-10-17",
-    "Statement" : [
-      {
-        Action : [
-          "logs:CreateLogStream",
-          "logs:PutLogEvents"
-        ],
-        Effect : "Allow",
-        Resource : "arn:aws:logs:*:*:*"
-      }
-    ]
-  })
-}
 
 resource "aws_iam_policy" "lambda_rekognition_policy" {
   name = "function-rekognition-policy"
@@ -62,23 +46,6 @@ resource "aws_iam_policy" "lambda_rekognition_policy" {
         ],
         Effect : "Allow",
         Resource : "*"
-      }
-    ]
-  })
-}
-
-resource "aws_iam_policy" "lambda_s3_access_policy" {
-  name = "lambda-S3-policy"
-  policy = jsonencode({
-    "Version" : "2012-10-17",
-    "Statement" : [
-      {
-        Action : [
-          "s3:GetObject",
-          "s3:PutObject"
-        ],
-        Effect : "Allow",
-        Resource : "arn:aws:s3:::{aws_s3_bucket.image_bucket}/*"
       }
     ]
   })
@@ -107,14 +74,13 @@ data "aws_iam_policy_document" "s3_bucket_policy_for_rekognition" {
   }
 }
 
+data "aws_iam_policy" "lambda_execute_policy" {
+  name = "AWSLambdaExecute"
+}
+
 resource "aws_iam_role" "iam_for_image_recognition_lambda" {
   name               = "iam_for_lambda"
   assume_role_policy = data.aws_iam_policy_document.assume_role_recognition_lambda.json
-}
-
-resource "aws_iam_role_policy_attachment" "function_logging_policy_attachment" {
-  role       = aws_iam_role.iam_for_image_recognition_lambda.id
-  policy_arn = aws_iam_policy.lambda_logging_policy.arn
 }
 
 resource "aws_iam_role_policy_attachment" "function_rekognition_policy_attachment" {
@@ -122,11 +88,11 @@ resource "aws_iam_role_policy_attachment" "function_rekognition_policy_attachmen
   policy_arn = aws_iam_policy.lambda_rekognition_policy.arn
 }
 
-resource "aws_iam_role_policy_attachment" "function_s3_policy_attachment" {
+# Attach the policy to the role
+resource "aws_iam_role_policy_attachment" "lambda_execute_role_attachment" {
   role       = aws_iam_role.iam_for_image_recognition_lambda.id
-  policy_arn = aws_iam_policy.lambda_s3_access_policy.arn
+  policy_arn = data.aws_iam_policy.lambda_execute_policy.arn
 }
-
 
 resource "aws_cloudwatch_log_group" "image_recognition_lambda_log_group" {
   name              = "/aws/lambda/image-recognition"
